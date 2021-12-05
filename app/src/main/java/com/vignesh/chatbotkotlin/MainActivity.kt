@@ -74,7 +74,7 @@ class MainActivity : AppCompatActivity() {
       val stream = this.resources.openRawResource(R.raw.credential)
       val credentials: GoogleCredentials = GoogleCredentials.fromStream(stream)
         .createScoped("https://www.googleapis.com/auth/cloud-platform")
-      val projectId: String = (credentials as ServiceAccountCredentials).getProjectId()
+      val projectId: String = (credentials as ServiceAccountCredentials).projectId
       val settingsBuilder: SessionsSettings.Builder = SessionsSettings.newBuilder()
       val sessionsSettings: SessionsSettings = settingsBuilder.setCredentialsProvider(
         FixedCredentialsProvider.create(credentials)
@@ -91,23 +91,24 @@ class MainActivity : AppCompatActivity() {
     val input = QueryInput.newBuilder()
       .setText(TextInput.newBuilder().setText(message).setLanguageCode("en-US")).build()
     GlobalScope.launch {
-      sendMessageInBg(sessionName!!, sessionsClient!!, input)
+      sendMessageInBg(input)
     }
   }
 
   private suspend fun sendMessageInBg(
-    session: SessionName, sessionsClient: SessionsClient,
     queryInput: QueryInput
   ) {
     withContext(Default) {
       try {
         val detectIntentRequest = DetectIntentRequest.newBuilder()
-          .setSession(session.toString())
+          .setSession(sessionName.toString())
           .setQueryInput(queryInput)
           .build()
-        val result = sessionsClient.detectIntent(detectIntentRequest)
-        runOnUiThread {
-          updateUI(result)
+        val result = sessionsClient?.detectIntent(detectIntentRequest)
+        if (result != null) {
+          runOnUiThread {
+            updateUI(result)
+          }
         }
       } catch (e: java.lang.Exception) {
         Log.d(TAG, "doInBackground: " + e.message)
@@ -124,6 +125,4 @@ class MainActivity : AppCompatActivity() {
       Toast.makeText(this, "something went wrong", Toast.LENGTH_SHORT).show()
     }
   }
-
-
 }
